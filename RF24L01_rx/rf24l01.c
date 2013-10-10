@@ -15,6 +15,7 @@ Connections:
   PC7 -> MISO
   PC6 -> MOSI
   PC5 -> SCK
+  PC2 -> IRQ
 */
 
 void RF24L01_init(void) {
@@ -187,7 +188,34 @@ void RF24L01_set_mode_RX(void) {
   GPIO_WriteHigh(GPIOC, GPIO_PIN_3); //CE -> High
 }
 
+RF24L01_reg_STATUS_content RF24L01_get_status(void) {
+  uint8_t status;
+  //Chip select
+  GPIO_WriteLow(GPIOC, GPIO_PIN_4);
+  
+  //Send address and command
+  while (SPI_GetFlagStatus(SPI_FLAG_TXE)== RESET);
+  SPI_SendData(RF24L01_command_NOP);
+  while (SPI_GetFlagStatus(SPI_FLAG_BSY)== SET);
+  while (SPI_GetFlagStatus(SPI_FLAG_RXNE)== RESET);
+  status = SPI_ReceiveData();
+  
+  //Chip select
+  GPIO_WriteHigh(GPIOC, GPIO_PIN_4);
+
+  return *((RF24L01_reg_STATUS_content *) &status);
+}
+
 void RF24L01_write_payload(uint8_t *data, uint8_t length) {
+  RF24L01_reg_STATUS_content a;
+  a = RF24L01_get_status();
+  if (a.MAX_RT) {
+    //Clear MAX_RT interrupt to allow further communication
+    *((uint8_t *)&a) = 0;
+    a.MAX_RT = 1;
+    RF24L01_write_register(RF24L01_reg_STATUS, (uint8_t *) &a, 1);
+  }
+  
   uint8_t i;
   //Chip select
   GPIO_WriteLow(GPIOC, GPIO_PIN_4);
@@ -216,23 +244,6 @@ void RF24L01_write_payload(uint8_t *data, uint8_t length) {
   GPIO_WriteLow(GPIOC, GPIO_PIN_3);
 }
 
-RF24L01_reg_STATUS_content RF24L01_get_status(void) {
-  uint8_t status;
-  //Chip select
-  GPIO_WriteLow(GPIOC, GPIO_PIN_4);
-  
-  //Send address and command
-  while (SPI_GetFlagStatus(SPI_FLAG_TXE)== RESET);
-  SPI_SendData(RF24L01_command_NOP);
-  while (SPI_GetFlagStatus(SPI_FLAG_BSY)== SET);
-  while (SPI_GetFlagStatus(SPI_FLAG_RXNE)== RESET);
-  status = SPI_ReceiveData();
-  
-  //Chip select
-  GPIO_WriteHigh(GPIOC, GPIO_PIN_4);
-
-  return *((RF24L01_reg_STATUS_content *) &status);
-}
 
 void RF24L01_read_payload(uint8_t *data, uint8_t length) {
   uint8_t i, status;
@@ -257,8 +268,8 @@ void RF24L01_read_payload(uint8_t *data, uint8_t length) {
   //Chip select
   GPIO_WriteHigh(GPIOC, GPIO_PIN_4); 
   
-  RF24L01_send_command(RF24L01_command_FLUSH_RX);
   RF24L01_write_register(RF24L01_reg_STATUS, &status, 1);
+  RF24L01_send_command(RF24L01_command_FLUSH_RX);
 }
 
 uint8_t RF24L01_is_data_available(void) {
