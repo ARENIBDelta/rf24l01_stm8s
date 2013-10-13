@@ -37,7 +37,7 @@ ActionState=1
 Enabled=0
 ShowSource=1
 [DebugChecksum]
-Checksum=374646263
+Checksum=213574318
 [CallStack]
 ShowArgs=0
 [Disassembly]
@@ -49,8 +49,6 @@ LogEnabled=0
 GraphEnabled=0
 ShowTimeLog=1
 ShowTimeSum=1
-[Breakpoints]
-Count=0
 [Log file]
 LoggingEnabled=_ 0
 LogFile=_ ""
@@ -58,9 +56,12 @@ Category=_ 0
 [TermIOLog]
 LoggingEnabled=_ 0
 LogFile=_ ""
+[Breakpoints]
+Count=0
 [Aliases]
 A0=_ "C:\Users\ZWM\Desktop\arenib\workspace_stm\RF24L01\STM8S_StdPeriph_Driver\src\stm8s_spi.c" ""
 A1=_ "C:\Users\ZWM\Desktop\arenib\workspace_stm\RF24L01\main.c" ""
 A2=_ "C:\Users\ZWM\Desktop\arenib\workspace_stm\RF24L01\rf24l01.c" ""
-Count=3
+A3=_ "C:\Users\ZWM\Desktop\arenib\workspace_stm\RF24L01_stm8s\RF24L01_tx\main.c" ""
+Count=4
 SuppressDialog=0

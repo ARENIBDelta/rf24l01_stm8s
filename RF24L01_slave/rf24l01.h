@@ -182,8 +182,10 @@ void RF24L01_init(void);
 void RF24L01_setup(uint8_t *tx_addr, uint8_t *rx_addr, uint8_t channel);
 void RF24L01_set_mode_TX(void);
 void RF24L01_set_mode_RX(void);
+uint8_t RF24L01_was_data_sent(void);
 uint8_t RF24L01_is_data_available(void);
 void RF24L01_read_payload(uint8_t *data, uint8_t length);
 void RF24L01_write_payload(uint8_t *data, uint8_t length);
+void RF24L01_clear_interrupts(void);
 
 #endif

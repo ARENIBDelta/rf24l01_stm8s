@@ -2,21 +2,6 @@
 #include <stm8s_spi.h>
 #include <stm8s_gpio.h>
 
-/*
-RF24L01 connector pinout:
-GND    VCC
-CE     CSN
-SCK    MOSI
-MISO   IRQ
-
-Connections:
-  PC3 -> CE
-  PC4 -> CSN
-  PC7 -> MISO
-  PC6 -> MOSI
-  PC5 -> SCK
-*/
-
 void RF24L01_init(void) {
   //Chip Select
   GPIO_Init(
@@ -106,6 +91,8 @@ void RF24L01_write_register(uint8_t register_addr, uint8_t *value, uint8_t lengt
     while (SPI_GetFlagStatus(SPI_FLAG_TXE)== RESET);
     SPI_SendData(value[i]);
     while (SPI_GetFlagStatus(SPI_FLAG_BSY)== SET);
+    while (SPI_GetFlagStatus(SPI_FLAG_RXNE)== RESET);
+    SPI_ReceiveData();
   }
   
   //Chip select
@@ -154,16 +141,23 @@ void RF24L01_setup(uint8_t *tx_addr, uint8_t *rx_addr, uint8_t channel) {
   config.PWR_UP = 0;
   config.PRIM_RX = 1;
   config.EN_CRC = 1;
+  config.MASK_MAX_RT = 0;
+  config.MASK_TX_DS = 0;
+  config.MASK_RX_DR = 0;
   RF24L01_write_register(RF24L01_reg_CONFIG, ((uint8_t *)&config), 1);
 }
 
 void RF24L01_set_mode_TX(void) {
   RF24L01_send_command(RF24L01_command_FLUSH_TX);
+  GPIO_WriteLow(GPIOC, GPIO_PIN_3);
 
   RF24L01_reg_CONFIG_content config;
   *((uint8_t *)&config) = 0;
   config.PWR_UP = 1;
   config.EN_CRC = 1;
+  config.MASK_MAX_RT = 0;
+  config.MASK_TX_DS = 0;
+  config.MASK_RX_DR = 0;
   RF24L01_write_register(RF24L01_reg_CONFIG, ((uint8_t *)&config), 1);  
 }
 
@@ -173,6 +167,9 @@ void RF24L01_set_mode_RX(void) {
   config.PWR_UP = 1;
   config.PRIM_RX = 1;
   config.EN_CRC = 1;
+  config.MASK_MAX_RT = 0;
+  config.MASK_TX_DS = 0;
+  config.MASK_RX_DR = 0;
   RF24L01_write_register(RF24L01_reg_CONFIG, ((uint8_t *)&config), 1);
 
   //Clear the status register to discard any data in the buffers
@@ -208,10 +205,10 @@ RF24L01_reg_STATUS_content RF24L01_get_status(void) {
 void RF24L01_write_payload(uint8_t *data, uint8_t length) {
   RF24L01_reg_STATUS_content a;
   a = RF24L01_get_status();
-  if (a.MAX_RT) {
-    //Clear MAX_RT interrupt to allow further communication
-    *((uint8_t *)&a) = 0;
-    a.MAX_RT = 1;
+  if (a.MAX_RT == 1) {
+    //If MAX_RT, clears it so we can send data
+    *((uint8_t *) &a) = 0;
+    a.TX_DS = 1;
     RF24L01_write_register(RF24L01_reg_STATUS, (uint8_t *) &a, 1);
   }
   
@@ -231,6 +228,8 @@ void RF24L01_write_payload(uint8_t *data, uint8_t length) {
     while (SPI_GetFlagStatus(SPI_FLAG_TXE)== RESET);
     SPI_SendData(data[i]);
     while (SPI_GetFlagStatus(SPI_FLAG_BSY)== SET);
+    while (SPI_GetFlagStatus(SPI_FLAG_RXNE)== RESET);
+    SPI_ReceiveData();
   }
   
   //Chip select
@@ -271,9 +270,29 @@ void RF24L01_read_payload(uint8_t *data, uint8_t length) {
   RF24L01_send_command(RF24L01_command_FLUSH_RX);
 }
 
+uint8_t RF24L01_was_data_sent(void) {
+  RF24L01_reg_STATUS_content a;
+  a = RF24L01_get_status();
+  
+  uint8_t res = 0;
+  if (a.TX_DS) {
+    res = 1;
+  }
+  else if (a.MAX_RT) {
+    res = 2;
+  }
+  
+  return res;
+}
+
 uint8_t RF24L01_is_data_available(void) {
   RF24L01_reg_STATUS_content a;
   a = RF24L01_get_status();
   return a.RX_DR;
 }
 
+void RF24L01_clear_interrupts(void) {
+  RF24L01_reg_STATUS_content a;
+  a = RF24L01_get_status();
+  RF24L01_write_register(RF24L01_reg_STATUS, (uint8_t*)&a, 1);
+}

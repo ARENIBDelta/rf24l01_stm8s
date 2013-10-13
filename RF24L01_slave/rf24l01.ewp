@@ -1572,6 +1572,12 @@
   <group>
     <name>STM8S Library</name>
     <file>
+      <name>$PROJ_DIR$\STM8S_StdPeriph_Driver\src\stm8s_exti.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\STM8S_StdPeriph_Driver\inc\stm8s_exti.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\STM8S_StdPeriph_Driver\src\stm8s_gpio.c</name>
     </file>
     <file>
